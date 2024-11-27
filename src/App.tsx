@@ -1,35 +1,78 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import "./App.css";
+
+import React from "react";
+import { GoogleMap, useJsApiLoader } from "@react-google-maps/api";
+
+const containerStyle = {
+  width: "400px",
+  height: "400px",
+};
+
+const initialCenter = {
+  lat: -3.745,
+  lng: -38.523,
+};
 
 function App() {
-  const [count, setCount] = useState(0)
+  const { isLoaded } = useJsApiLoader({
+    id: "google-map-script",
+    googleMapsApiKey: "AIzaSyBLZxDKEynXZdwnrfwiLvi6UjkOew7i8-Y",
+  });
 
-  return (
-    <>
-      <div>
-        <a href="https://vitejs.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+  const [map, setMap] = React.useState<google.maps.Map | null>(null);
+
+  const onLoad = React.useCallback((mapInstance: google.maps.Map) => {
+    // Example of using the map instance
+    const bounds = new window.google.maps.LatLngBounds(initialCenter);
+    mapInstance.fitBounds(bounds);
+    setMap(mapInstance);
+  }, []);
+
+  const onUnmount = React.useCallback(() => {
+    setMap(null);
+  }, []);
+
+  const handlePanToLocation = () => {
+    if (map) {
+      const newCenter = { lat: 37.7749, lng: -122.4194 }; // San Francisco
+      map.panTo(newCenter);
+    }
+  };
+
+  const handleZoomIn = () => {
+    if (map) {
+      const currentZoom = map.getZoom() || 10;
+      map.setZoom(currentZoom + 1); // Zoom in
+    }
+  };
+
+  const handleZoomOut = () => {
+    if (map) {
+      const currentZoom = map.getZoom() || 10;
+      map.setZoom(currentZoom - 1); // Zoom out
+    }
+  };
+
+  return isLoaded ? (
+    <div>
+      <GoogleMap
+        mapContainerStyle={containerStyle}
+        center={initialCenter}
+        zoom={10}
+        onLoad={onLoad}
+        onUnmount={onUnmount}
+      >
+        {/* Add markers or child components if needed */}
+      </GoogleMap>
+      <div style={{ marginTop: "20px" }}>
+        <button onClick={handlePanToLocation}>Pan to San Francisco</button>
+        <button onClick={handleZoomIn}>Zoom In</button>
+        <button onClick={handleZoomOut}>Zoom Out</button>
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    </div>
+  ) : (
+    <></>
+  );
 }
 
-export default App
+export default React.memo(App);
