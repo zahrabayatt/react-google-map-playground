@@ -1,50 +1,24 @@
-import "./App.css";
-import React, { useCallback, useState } from "react";
-import ControlButtons from "./components/ControlButtons";
-import Map from "./components/Map";
+import { APIProvider, Map } from "@vis.gl/react-google-maps";
+import ControlButtonsWrapper from "./components/ControlButtonWrapper";
 
-const initialCenter = { lat: -3.745, lng: -38.523 };
-const sanFrancisco = { lat: 37.7749, lng: -122.4194 };
-
-function App() {
-  const [map, setMap] = useState<google.maps.Map | null>(null);
-
-  const onLoad = useCallback((mapInstance: google.maps.Map) => {
-    const bounds = new window.google.maps.LatLngBounds(initialCenter);
-    mapInstance.fitBounds(bounds);
-    setMap(mapInstance);
-  }, []);
-
-  const onUnmount = useCallback(() => {
-    setMap(null);
-  }, []);
-
-  const handlePanToLocation = () => {
-    if (map) map.panTo(sanFrancisco);
-  };
-
-  const handleZoomIn = () => {
-    if (map) map.setZoom((map.getZoom() || 10) + 1);
-  };
-
-  const handleZoomOut = () => {
-    if (map) map.setZoom((map.getZoom() || 10) - 1);
-  };
-
+const App = () => {
   return (
     <div>
-      <Map
-        onLoad={onLoad}
-        onUnmount={onUnmount}
-        initialCenter={initialCenter}
-      />
-      <ControlButtons
-        onPan={handlePanToLocation}
-        onZoomIn={handleZoomIn}
-        onZoomOut={handleZoomOut}
-      />
+      <APIProvider apiKey="AIzaSyBLZxDKEynXZdwnrfwiLvi6UjkOew7i8-Y">
+        <Map
+          style={{ width: "100vw", height: "100vh" }}
+          defaultCenter={{ lat: 22.54992, lng: 0 }}
+          defaultZoom={3}
+          gestureHandling={"greedy"}
+          disableDefaultUI={true}
+        >
+          <ControlButtonsWrapper />
+        </Map>
+      </APIProvider>
     </div>
   );
-}
+};
 
-export default React.memo(App);
+export default App;
+
+//  @vis.gl/react-google-maps docs: https://visgl.github.io/react-google-maps/docs
