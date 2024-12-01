@@ -1,32 +1,21 @@
-import { useCallback, useMemo } from "react";
-import useGoogleMap from "./hooks/useGoogleMap";
-import PanToButton from "./components/PanToButton";
 import "./App.css";
 
-const App = () => {
-  const markerPosition = useMemo(() => ({ lat: -25.344, lng: 131.031 }), []);
-  const apiKey = "AIzaSyBLZxDKEynXZdwnrfwiLvi6UjkOew7i8-Y"; // Replace with your actual API key
-  const map = useGoogleMap(apiKey, markerPosition);
+import { Wrapper, Status } from "@googlemaps/react-wrapper";
+import Spinner from "./components/Spinner";
+import ErrorComponent from "./components/ErrorComponent";
+import { ReactElement } from "react";
+import GoogleMap from "./components/GoogleMap";
 
-  const panToMarker = useCallback(() => {
-    if (map) {
-      map.panTo(markerPosition);
-      map.setZoom(8);
-    }
-  }, [map, markerPosition]);
-
-  return (
-    <div style={{ position: "relative" }}>
-      <div
-        id="map"
-        style={{
-          width: "100%",
-          height: "100vh",
-        }}
-      ></div>
-      <PanToButton onClick={panToMarker} />
-    </div>
-  );
+const render = (status: Status): ReactElement => {
+  if (status === Status.FAILURE) return <ErrorComponent />;
+  return <Spinner />;
 };
 
+const App = () => (
+  <Wrapper apiKey={"AIzaSyBLZxDKEynXZdwnrfwiLvi6UjkOew7i8-Y"} render={render}>
+    <GoogleMap zoom={8} center={{ lat: -34.397, lng: 150.644 }} />
+  </Wrapper>
+);
+
 export default App;
+// https://www.npmjs.com/package/@googlemaps/react-wrapper
