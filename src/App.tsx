@@ -1,43 +1,23 @@
 import { useEffect } from "react";
+import { Loader } from "@googlemaps/js-api-loader";
 import "./App.css";
 
 const App = () => {
-  // useEffect(() => {
-  //   const loadGoogleMaps = async () => {
-  //     if (!document.querySelector("script[src*='maps.googleapis.com']")) {
-  //       const googleMapsScript = document.createElement("script");
-  //       googleMapsScript.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyBLZxDKEynXZdwnrfwiLvi6UjkOew7i8-Y&libraries=places`;
-  //       googleMapsScript.async = true;
-  //       googleMapsScript.defer = true;
-
-  //       googleMapsScript.onload = async () => {
-  //         const { Map } = (await google.maps.importLibrary(
-  //           "maps"
-  //         )) as google.maps.MapsLibrary;
-
-  //         new Map(document.getElementById("map") as HTMLElement, {
-  //           center: { lat: -34.397, lng: 150.644 },
-  //           zoom: 8,
-  //         });
-  //       };
-
-  //       document.head.appendChild(googleMapsScript);
-  //     }
-  //   };
-
-  //   loadGoogleMaps();
-  // }, []);
-
   useEffect(() => {
     const initMap = async () => {
       try {
-        // Dynamically import the "maps" library
-        const { Map } = (await google.maps.importLibrary(
-          "maps"
-        )) as google.maps.MapsLibrary;
+        // Create a loader instance with your API key
+        const loader = new Loader({
+          apiKey: "AIzaSyBLZxDKEynXZdwnrfwiLvi6UjkOew7i8-Y", // Replace with your actual API key
+          version: "weekly", // Optional: specify the API version
+          libraries: ["places"], // Optional: include additional libraries
+        });
+
+        // Load the Google Maps API
+        const google = await loader.importLibrary("maps");
 
         // Initialize the map
-        new Map(document.getElementById("map") as HTMLElement, {
+        new google.Map(document.getElementById("map") as HTMLElement, {
           center: { lat: -34.397, lng: 150.644 },
           zoom: 8,
         });
@@ -53,8 +33,8 @@ const App = () => {
     <div
       id="map"
       style={{
-        width: "100%", // Full width
-        height: "100vh", // Full height
+        width: "100%", // Set the width of the map container
+        height: "100vh", // Set the height of the map container
       }}
     ></div>
   );
