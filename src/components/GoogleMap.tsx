@@ -1,10 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { GoogleMapsOverlay } from "@deck.gl/google-maps";
 import { ScatterplotLayer } from "@deck.gl/layers";
-
-interface DataItem {
-  position: [number, number]; // Latitude and Longitude as a tuple of numbers
-}
 
 interface Props {
   center: google.maps.LatLngLiteral;
@@ -12,10 +8,49 @@ interface Props {
   panToMarker: () => void;
 }
 
+interface BartStation {
+  name: string;
+  code: string;
+  address: string;
+  entries: string; // Entries are in string format, we need to parse them to numbers
+  exits: string; // Exits are in string format, we need to parse them to numbers
+  coordinates: [number, number]; // [longitude, latitude]
+}
+
 const GoogleMap = ({ center, zoom, panToMarker }: Props) => {
   const ref = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [marker, setMarker] = useState<google.maps.Marker | null>(null);
+
+  const [bartStations, setBartStations] = useState<BartStation[]>([]);
+
+  useEffect(() => {
+    const fetchBartStations = async () => {
+      const response = await fetch(
+        "https://raw.githubusercontent.com/visgl/deck.gl-data/master/website/bart-stations.json"
+      );
+      const data: BartStation[] = await response.json();
+      setBartStations(data);
+    };
+    fetchBartStations();
+  }, []);
+
+  const layer = useMemo(
+    () =>
+      new ScatterplotLayer<BartStation>({
+        id: "ScatterplotLayer",
+        data: bartStations,
+        stroked: true,
+        getPosition: (d) => d.coordinates,
+        getRadius: (d) => Math.sqrt(parseInt(d.exits)),
+        getFillColor: [255, 140, 0],
+        getLineColor: [0, 0, 0],
+        getLineWidth: 10,
+        radiusScale: 6,
+        pickable: true,
+      }),
+    [bartStations] // Recreate layer when bartStations changes
+  );
 
   useEffect(() => {
     if (ref.current) {
@@ -42,20 +77,13 @@ const GoogleMap = ({ center, zoom, panToMarker }: Props) => {
   }, [center, map, marker]);
 
   useEffect(() => {
-    const overlay = new GoogleMapsOverlay({
-      layers: [
-        new ScatterplotLayer({
-          id: "deckgl-circle",
-          data: [{ position: [0.45, 51.47] }],
-          getPosition: (d: DataItem) => d.position,
-          getFillColor: [255, 0, 0, 100],
-          getRadius: 1000,
-        }),
-      ],
-    });
-
-    overlay.setMap(map);
-  }, [map]);
+    if (map && bartStations.length > 0) {
+      const overlay = new GoogleMapsOverlay({
+        layers: [layer],
+      });
+      overlay.setMap(map);
+    }
+  }, [map, bartStations, layer]);
 
   return (
     <div style={{ position: "relative" }}>
@@ -75,3 +103,7 @@ const GoogleMap = ({ center, zoom, panToMarker }: Props) => {
   );
 };
 export default GoogleMap;
+
+// https://deck.gl/docs/get-started/getting-started
+// https://deck.gl/docs/api-reference/layers/scatterplot-layer#
+// https://deck.gl/docs/api-reference/google-maps/overview
