@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { GoogleMapsOverlay } from "@deck.gl/google-maps";
-import { ScatterplotLayer } from "@deck.gl/layers";
+import useBartStationsLayer from "../hooks/useBartStationsLayer";
 
 interface Props {
   center: google.maps.LatLngLiteral;
@@ -8,49 +8,11 @@ interface Props {
   panToMarker: () => void;
 }
 
-interface BartStation {
-  name: string;
-  code: string;
-  address: string;
-  entries: string; // Entries are in string format, we need to parse them to numbers
-  exits: string; // Exits are in string format, we need to parse them to numbers
-  coordinates: [number, number]; // [longitude, latitude]
-}
-
 const GoogleMap = ({ center, zoom, panToMarker }: Props) => {
   const ref = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [marker, setMarker] = useState<google.maps.Marker | null>(null);
-
-  const [bartStations, setBartStations] = useState<BartStation[]>([]);
-
-  useEffect(() => {
-    const fetchBartStations = async () => {
-      const response = await fetch(
-        "https://raw.githubusercontent.com/visgl/deck.gl-data/master/website/bart-stations.json"
-      );
-      const data: BartStation[] = await response.json();
-      setBartStations(data);
-    };
-    fetchBartStations();
-  }, []);
-
-  const layer = useMemo(
-    () =>
-      new ScatterplotLayer<BartStation>({
-        id: "ScatterplotLayer",
-        data: bartStations,
-        stroked: true,
-        getPosition: (d) => d.coordinates,
-        getRadius: (d) => Math.sqrt(parseInt(d.exits)),
-        getFillColor: [255, 140, 0],
-        getLineColor: [0, 0, 0],
-        getLineWidth: 10,
-        radiusScale: 6,
-        pickable: true,
-      }),
-    [bartStations] // Recreate layer when bartStations changes
-  );
+  const bartStationsLayer = useBartStationsLayer();
 
   useEffect(() => {
     if (ref.current) {
@@ -77,13 +39,13 @@ const GoogleMap = ({ center, zoom, panToMarker }: Props) => {
   }, [center, map, marker]);
 
   useEffect(() => {
-    if (map && bartStations.length > 0) {
+    if (map && bartStationsLayer) {
       const overlay = new GoogleMapsOverlay({
-        layers: [layer],
+        layers: [bartStationsLayer],
       });
       overlay.setMap(map);
     }
-  }, [map, bartStations, layer]);
+  }, [map, bartStationsLayer]);
 
   return (
     <div style={{ position: "relative" }}>
