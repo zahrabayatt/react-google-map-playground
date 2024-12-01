@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { GoogleMapsOverlay } from "@deck.gl/google-maps";
 import useBartStationsLayer from "../hooks/useBartStationsLayer";
+import useZipCodeLayer from "../hooks/useZipCodeLayer";
 
 interface Props {
   center: google.maps.LatLngLiteral;
@@ -13,6 +14,7 @@ const GoogleMap = ({ center, zoom, panToMarker }: Props) => {
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [marker, setMarker] = useState<google.maps.Marker | null>(null);
   const bartStationsLayer = useBartStationsLayer();
+  const zipCodesLayer = useZipCodeLayer();
 
   useEffect(() => {
     if (ref.current) {
@@ -39,13 +41,13 @@ const GoogleMap = ({ center, zoom, panToMarker }: Props) => {
   }, [center, map, marker]);
 
   useEffect(() => {
-    if (map && bartStationsLayer) {
+    if (map && bartStationsLayer && zipCodesLayer) {
       const overlay = new GoogleMapsOverlay({
-        layers: [bartStationsLayer],
+        layers: [bartStationsLayer, zipCodesLayer],
       });
       overlay.setMap(map);
     }
-  }, [map, bartStationsLayer]);
+  }, [map, bartStationsLayer, zipCodesLayer]);
 
   return (
     <div style={{ position: "relative" }}>
