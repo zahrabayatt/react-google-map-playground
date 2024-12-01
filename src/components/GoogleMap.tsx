@@ -1,10 +1,17 @@
 import { useEffect, useRef, useState } from "react";
+import { GoogleMapsOverlay } from "@deck.gl/google-maps";
+import { ScatterplotLayer } from "@deck.gl/layers";
+
+interface DataItem {
+  position: [number, number]; // Latitude and Longitude as a tuple of numbers
+}
 
 interface Props {
   center: google.maps.LatLngLiteral;
   zoom: number;
   panToMarker: () => void;
 }
+
 const GoogleMap = ({ center, zoom, panToMarker }: Props) => {
   const ref = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<google.maps.Map | null>(null);
@@ -33,6 +40,22 @@ const GoogleMap = ({ center, zoom, panToMarker }: Props) => {
       map.setZoom(8);
     }
   }, [center, map, marker]);
+
+  useEffect(() => {
+    const overlay = new GoogleMapsOverlay({
+      layers: [
+        new ScatterplotLayer({
+          id: "deckgl-circle",
+          data: [{ position: [0.45, 51.47] }],
+          getPosition: (d: DataItem) => d.position,
+          getFillColor: [255, 0, 0, 100],
+          getRadius: 1000,
+        }),
+      ],
+    });
+
+    overlay.setMap(map);
+  }, [map]);
 
   return (
     <div style={{ position: "relative" }}>

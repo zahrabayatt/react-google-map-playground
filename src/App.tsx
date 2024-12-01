@@ -13,8 +13,8 @@ const render = (status: Status): ReactElement => {
 
 const App = () => {
   const [center, setCenter] = useState<google.maps.LatLngLiteral>({
-    lat: -34.397,
-    lng: 150.644,
+    lat: 51.47,
+    lng: 0.45,
   });
 
   const panToMarker = () => {
