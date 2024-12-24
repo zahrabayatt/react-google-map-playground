@@ -1,14 +1,12 @@
-import { FlyToInterpolator, ViewStateMap } from '@deck.gl/core';
+import { FlyToInterpolator, MapViewState } from '@deck.gl/core';
 import { GeoJsonLayer, ScatterplotLayer } from '@deck.gl/layers';
 import DeckGL from '@deck.gl/react';
 import { APIProvider, Map } from '@vis.gl/react-google-maps';
 import { useState } from 'react';
 import './App.css';
 
-type ViewState = ViewStateMap<any>;
-
 function App() {
-  const [viewState, setViewState] = useState<ViewState>({
+  const [viewState, setViewState] = useState<MapViewState>({
     longitude: 0.45,
     latitude: 51.47,
     zoom: 10
@@ -108,7 +106,9 @@ function App() {
       <div style={{ width: '100%', height: '100%', position: 'relative' }}>
         <DeckGL
           viewState={viewState}
-          onViewStateChange={({ viewState }) => setViewState(viewState)}
+          onViewStateChange={({ viewState }) => {
+            setViewState(viewState as MapViewState)
+          }}
           controller
           layers={layers}
         >
