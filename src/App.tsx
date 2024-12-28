@@ -1,15 +1,26 @@
-import { FlyToInterpolator, LayersList, MapViewState } from "@deck.gl/core";
+import {
+  FlyToInterpolator,
+  LayersList,
+  MapView,
+  MapViewState,
+  WebMercatorViewport,
+} from "@deck.gl/core";
 import { GeoJsonLayer, ScatterplotLayer } from "@deck.gl/layers";
 import DeckGL from "@deck.gl/react";
 import { APIProvider, Map } from "@vis.gl/react-google-maps";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "./App.css";
 
 function App() {
   const [viewState, setViewState] = useState<MapViewState>({
-    longitude: 0.45,
-    latitude: 51.47,
-    zoom: 10,
+    longitude: 53.688,
+    latitude: 32.4279,
+    zoom: 4,
+  });
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [containerSize, setContainerSize] = useState({
+    width: 800,
+    height: 600,
   });
 
   // Example GeoJSON for boundary (replace with actual boundary data)
@@ -31,7 +42,6 @@ function App() {
       name: "Paris Boundary",
     },
   };
-
   const layers = [
     new ScatterplotLayer({
       id: "deckgl-circle",
@@ -69,49 +79,105 @@ function App() {
     return { minLng, maxLng, minLat, maxLat };
   };
 
-  // Function to calculate the zoom level based on the bounding box
-  const calculateZoomLevel = (boundingBox: {
-    minLng: number;
-    maxLng: number;
-    minLat: number;
-    maxLat: number;
-  }) => {
-    const longitudeDelta = boundingBox.maxLng - boundingBox.minLng;
-    const latitudeDelta = boundingBox.maxLat - boundingBox.minLat;
-
-    // Calculate zoom level based on bounding box size (adjust multiplier as needed)
-    const zoomLevel = Math.min(
-      18,
-      Math.max(10, Math.log2(360 / Math.max(longitudeDelta, latitudeDelta)))
-    );
-    return zoomLevel;
-  };
-
   // Function to fly to the boundary
   const handleFlyToBoundary = () => {
     // Calculate bounding box for the boundary
     const boundingBox = calculateBoundingBox(boundaryGeoJson);
 
-    // Calculate zoom level that fits the bounding box
-    const newZoom = calculateZoomLevel(boundingBox);
+    if (containerRef.current) {
+      // Get the actual width and height of the container
+      const containerWidth = containerRef.current.offsetWidth;
+      const containerHeight = containerRef.current.offsetHeight;
 
-    // Calculate the center of the boundary for the fly-to location
-    const newLongitude = (boundingBox.minLng + boundingBox.maxLng) / 2;
-    const newLatitude = (boundingBox.minLat + boundingBox.maxLat) / 2;
+      // Create a WebMercatorViewport instance using the container's dimensions
+      const viewport = new WebMercatorViewport({
+        width: containerWidth,
+        height: containerHeight,
+      });
 
-    // Update the viewState with the fly-to transition
-    setViewState({
-      longitude: newLongitude,
-      latitude: newLatitude,
-      zoom: newZoom,
-      transitionInterpolator: new FlyToInterpolator(),
-      transitionDuration: 2000, // duration of the fly-to animation in ms
-    });
+      // Use viewport.fitBounds to calculate the center and zoom level based on the bounding box
+      const fitBoundsState = viewport.fitBounds(
+        [
+          [boundingBox.minLng, boundingBox.minLat], // South-west corner
+          [boundingBox.maxLng, boundingBox.maxLat], // North-east corner
+        ],
+        { padding: 50 } // Optional padding for better view margin
+      );
+
+      // Update the viewState with the new center and zoom level
+      setViewState({
+        longitude: fitBoundsState.longitude,
+        latitude: fitBoundsState.latitude,
+        zoom: fitBoundsState.zoom,
+        transitionInterpolator: new FlyToInterpolator(),
+        transitionDuration: 2000, // duration of the fly-to animation in ms
+      });
+    }
   };
+
+  useEffect(() => {
+    if (containerRef.current) {
+      // Dynamically calculate the container's width and height
+      const updateContainerSize = () => {
+        if (containerRef.current) {
+          setContainerSize({
+            width: containerRef.current.offsetWidth,
+            height: containerRef.current.offsetHeight,
+          });
+        }
+      };
+
+      // Add resize event listener
+      window.addEventListener("resize", updateContainerSize);
+
+      // Initial size calculation
+      updateContainerSize();
+
+      // Cleanup event listener on component unmount
+      return () => {
+        window.removeEventListener("resize", updateContainerSize);
+      };
+    }
+  }, []);
+
+  useEffect(() => {
+    const iranBoundingBox = {
+      minLng: 44.0,
+      maxLng: 60.0,
+      minLat: 23.0,
+      maxLat: 39.7,
+    };
+    const { minLng, maxLng, minLat, maxLat } = iranBoundingBox;
+
+    // Create a WebMercatorViewport instance with dynamic width and height
+    const viewport = new WebMercatorViewport({
+      width: containerSize.width,
+      height: containerSize.height,
+    });
+
+    // Calculate the center and zoom level to fit the bounding box
+    const fitBoundsState = viewport.fitBounds(
+      [
+        [minLng, minLat], // South-west corner
+        [maxLng, maxLat], // North-east corner
+      ],
+      { padding: 50 } // Optional padding for better view margin
+    );
+
+    // Update the viewState with the new center and zoom level
+    setViewState({
+      latitude: fitBoundsState.latitude,
+      longitude: fitBoundsState.longitude,
+      zoom: fitBoundsState.zoom,
+    });
+  }, [containerSize]);
 
   return (
     <APIProvider apiKey="AIzaSyC6-kPQq0Hv7gacfZ_1NenpyS_a1ahV910">
-      <div style={{ width: "100%", height: "100%", position: "relative" }}>
+      <div
+        style={{ width: "100%", height: "100%", position: "relative" }}
+        ref={containerRef}
+      >
         <MyMap
           viewState={viewState}
           setViewState={setViewState}
@@ -153,13 +219,21 @@ const MyMap = ({ viewState, setViewState, layers }: MyMapProps) => {
   return (
     <DeckGL
       viewState={viewState}
+      views={new MapView()}
       onViewStateChange={({ viewState }) => {
         setViewState(viewState as MapViewState);
       }}
       controller
       layers={layers}
     >
-      <Map mapId="8682b82c7c8bf444" />
+      <Map
+        mapId="8682b82c7c8bf444"
+        mapTypeId="hybrid"
+        // satellite: satellite google map when labels is off
+        // hybrid: satellite google map when labels is on
+        // roadmap: default value
+        // terrain
+      />
     </DeckGL>
   );
 };
@@ -174,11 +248,11 @@ const ZoomInButton = ({ viewState, setViewState }: ZoomProps) => {
     <button
       onClick={() => {
         const zoom = viewState.zoom ?? 0;
+        console.log("Zoom in", zoom + 1);
         setViewState({
           ...viewState,
           zoom: zoom + 1,
-          transitionInterpolator: new FlyToInterpolator(),
-          transitionDuration: 500, // duration of the fly-to animation in ms
+          transitionDuration: 400, // duration of the fly-to animation in ms
         });
       }}
     >
@@ -192,11 +266,11 @@ const ZoomOutButton = ({ viewState, setViewState }: ZoomProps) => {
     <button
       onClick={() => {
         const zoom = viewState.zoom ?? 0;
+        console.log("Zoom out", zoom - 1);
         setViewState({
           ...viewState,
           zoom: zoom - 1,
-          transitionInterpolator: new FlyToInterpolator(),
-          transitionDuration: 500, // duration of the fly-to animation in ms
+          transitionDuration: 400, // duration of the fly-to animation in ms
         });
       }}
     >
