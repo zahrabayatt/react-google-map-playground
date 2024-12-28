@@ -1,14 +1,18 @@
+import { useEffect, useRef, useState } from "react";
+import {
+  APIProvider,
+  Map,
+  useMap,
+  useMapsLibrary,
+} from "@vis.gl/react-google-maps";
 import {
   FlyToInterpolator,
   LayersList,
-  MapView,
   MapViewState,
   WebMercatorViewport,
 } from "@deck.gl/core";
-import { GeoJsonLayer, ScatterplotLayer } from "@deck.gl/layers";
 import DeckGL from "@deck.gl/react";
-import { APIProvider, Map } from "@vis.gl/react-google-maps";
-import { useEffect, useRef, useState } from "react";
+import { PolygonLayer } from "@deck.gl/layers";
 import "./App.css";
 
 function App() {
@@ -17,6 +21,7 @@ function App() {
     latitude: 32.4279,
     zoom: 4,
   });
+
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerSize, setContainerSize] = useState({
     width: 800,
@@ -42,24 +47,15 @@ function App() {
       name: "Paris Boundary",
     },
   };
-  const layers = [
-    new ScatterplotLayer({
-      id: "deckgl-circle",
-      data: [{ position: [0.45, 51.47] }],
-      getPosition: (d) => d.position,
-      getFillColor: [255, 0, 0, 100],
-      getRadius: 1000,
-    }),
-    new GeoJsonLayer({
-      id: "boundary-layer",
-      data: boundaryGeoJson,
-      filled: true,
-      lineWidthMinPixels: 2,
-      getFillColor: [0, 0, 255, 100], // Blue boundary color
-      getLineColor: [0, 0, 255],
-      getLineWidth: 3,
-    }),
-  ];
+
+  const parisBoundryLayer = new PolygonLayer({
+    id: "paris-boundary",
+    data: [boundaryGeoJson],
+    getPolygon: (d) => d.geometry.coordinates,
+    getFillColor: [0, 128, 255, 100], // Light blue with transparency
+    getLineColor: [0, 0, 255], // Blue border
+    lineWidthMinPixels: 2,
+  });
 
   // Calculate the bounding box for the boundary (min and max longitude/latitude)
   const calculateBoundingBox = (geoJson: GeoJSON.Feature<GeoJSON.Polygon>) => {
@@ -173,7 +169,11 @@ function App() {
   }, [containerSize]);
 
   return (
-    <APIProvider apiKey="AIzaSyC6-kPQq0Hv7gacfZ_1NenpyS_a1ahV910">
+    <APIProvider
+      apiKey="<Your-API-Key>"
+      libraries={["places", "geometry", "drawing"]}
+      language="fa"
+    >
       <div
         style={{ width: "100%", height: "100%", position: "relative" }}
         ref={containerRef}
@@ -181,8 +181,9 @@ function App() {
         <MyMap
           viewState={viewState}
           setViewState={setViewState}
-          layers={layers}
+          layers={[parisBoundryLayer]}
         />
+        <Search setViewState={setViewState} />
         <button
           style={{ position: "absolute", top: 60, left: 10 }}
           onClick={handleFlyToBoundary}
@@ -207,8 +208,6 @@ function App() {
   );
 }
 
-export default App;
-
 interface MyMapProps {
   viewState: MapViewState;
   setViewState: (viewState: MapViewState) => void;
@@ -219,22 +218,68 @@ const MyMap = ({ viewState, setViewState, layers }: MyMapProps) => {
   return (
     <DeckGL
       viewState={viewState}
-      views={new MapView()}
       onViewStateChange={({ viewState }) => {
         setViewState(viewState as MapViewState);
       }}
       controller
       layers={layers}
     >
-      <Map
-        mapId="8682b82c7c8bf444"
-        mapTypeId="hybrid"
-        // satellite: satellite google map when labels is off
-        // hybrid: satellite google map when labels is on
-        // roadmap: default value
-        // terrain
-      />
+      <Map mapId="<Your-Map-ID>" mapTypeId="roadmap" />
     </DeckGL>
+  );
+};
+
+const Search = ({
+  setViewState,
+}: {
+  setViewState: (viewState: MapViewState) => void;
+}) => {
+  const map = useMap(); // Get the map instance
+  const placesLib = useMapsLibrary("places"); // Load the "places" library
+  const searchInput = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!map || !placesLib || !searchInput.current) return;
+
+    const autocomplete = new placesLib.Autocomplete(searchInput.current);
+
+    const handleFlyToLocation = (location: google.maps.LatLng) => {
+      const viewport = new WebMercatorViewport({
+        width: 800,
+        height: 600,
+      });
+      const fitBoundsState = viewport.fitBounds(
+        [
+          [location.lng() - 0.1, location.lat() - 0.1],
+          [location.lng() + 0.1, location.lat() + 0.1],
+        ],
+        { padding: 50 }
+      );
+
+      setViewState({
+        longitude: fitBoundsState.longitude,
+        latitude: fitBoundsState.latitude,
+        zoom: fitBoundsState.zoom,
+        transitionInterpolator: new FlyToInterpolator(),
+        transitionDuration: 2000,
+      });
+    };
+
+    autocomplete.addListener("place_changed", () => {
+      const place = autocomplete.getPlace();
+      if (place.geometry) {
+        handleFlyToLocation(place.geometry.location!);
+      }
+    });
+  }, [map, placesLib, setViewState]);
+
+  return (
+    <div
+      className="search-box"
+      style={{ position: "absolute", top: 10, right: 10 }}
+    >
+      <input type="text" ref={searchInput} placeholder="Search places..." />
+    </div>
   );
 };
 
@@ -278,3 +323,5 @@ const ZoomOutButton = ({ viewState, setViewState }: ZoomProps) => {
     </button>
   );
 };
+
+export default App;
