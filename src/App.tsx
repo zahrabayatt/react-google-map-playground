@@ -19,7 +19,7 @@ const App = () => {
   };
 
   return (
-    <Wrapper apiKey={apiKey} render={render}>
+    <Wrapper apiKey={apiKey} libraries={["drawing"]} render={render}>
       <GoogleMap zoom={10} center={center} />
     </Wrapper>
   );
