@@ -3,7 +3,7 @@ import Spinner from "./components/Spinner";
 import ErrorComponent from "./components/ErrorComponent";
 import { ReactElement } from "react";
 import GoogleMap from "./components/GoogleMap";
-import "./App.css"
+import "./App.css";
 
 const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
