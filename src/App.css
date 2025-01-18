@@ -5,3 +5,14 @@
   overflow: hidden;
 }
 
+/* .gm-control-active,
+.gm-fullscreen-control,
+.gm-zoom-control {
+  border-radius: 5px !important;
+  overflow: hidden !important;
+} */
+
+.gmnoprint > div {
+  border-radius: 5px !important;
+  scale: 0.87;
+}
