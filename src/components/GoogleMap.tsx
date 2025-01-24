@@ -1,12 +1,13 @@
 // GoogleMap.tsx
 import { forwardRef, useImperativeHandle, useEffect, useRef } from "react";
-import { DrawingStateType } from "../App";
+import { DrawingShapeType, DrawingStateType } from "../App";
 
 interface GoogleMapProps {
   zoom: number;
   center: google.maps.LatLngLiteral;
   drawingState: DrawingStateType;
   onExitDrawing: () => void;
+  shapeType: DrawingShapeType;
 }
 
 export interface GoogleMapHandle {
@@ -15,13 +16,13 @@ export interface GoogleMapHandle {
 }
 
 const GoogleMap = forwardRef<GoogleMapHandle, GoogleMapProps>(
-  ({ zoom, center, drawingState, onExitDrawing }, ref) => {
+  ({ zoom, center, drawingState, onExitDrawing, shapeType }, ref) => {
     const mapRef = useRef<HTMLDivElement | null>(null);
     const googleMap = useRef<google.maps.Map | null>(null);
     const pathRef = useRef<google.maps.MVCArray<google.maps.LatLng> | null>(
       null
     );
-    const polylineRef = useRef<google.maps.Polyline | null>(null);
+    const shapeRef = useRef<google.maps.Polyline | google.maps.Polygon | null>(null);
     const temporaryLineRef = useRef<google.maps.Polyline | null>(null);
     const clickListenerRef = useRef<google.maps.MapsEventListener | null>(null);
     const mouseMoveListenerRef = useRef<google.maps.MapsEventListener | null>(
@@ -40,8 +41,8 @@ const GoogleMap = forwardRef<GoogleMapHandle, GoogleMapProps>(
         }));
       },
       clearDrawing: () => {
-        polylineRef.current?.setMap(null);
-        polylineRef.current = null;
+        shapeRef.current?.setMap(null);
+        shapeRef.current = null;
         pathRef.current = null;
         temporaryLineRef.current?.setMap(null);
         temporaryLineRef.current = null;
@@ -65,10 +66,10 @@ const GoogleMap = forwardRef<GoogleMapHandle, GoogleMapProps>(
         const path = new google.maps.MVCArray<google.maps.LatLng>();
         pathRef.current = path;
 
-        // Clear previous drawing if exists
-        if (polylineRef.current) {
-          polylineRef.current.setMap(null);
-          polylineRef.current = null;
+        // Clear previous drawing
+        if (shapeRef.current) {
+          shapeRef.current.setMap(null);
+          shapeRef.current = null;
         }
 
         googleMap.current.setOptions({
@@ -80,14 +81,28 @@ const GoogleMap = forwardRef<GoogleMapHandle, GoogleMapProps>(
           zoomControl: false,
         });
 
-        polylineRef.current = new google.maps.Polyline({
-          map: googleMap.current,
-          path: path,
-          strokeColor: "#FF0000",
-          strokeOpacity: 1.0,
-          strokeWeight: 2,
-          zIndex: 1000,
-        });
+        // Create appropriate shape
+        if (shapeType === "polyline") {
+          shapeRef.current = new google.maps.Polyline({
+            map: googleMap.current,
+            path: path,
+            strokeColor: "#FF0000",
+            strokeOpacity: 1.0,
+            strokeWeight: 2,
+            zIndex: 1000
+          });
+        } else {
+          shapeRef.current = new google.maps.Polygon({
+            map: googleMap.current,
+            paths: [path],
+            strokeColor: "#FF0000",
+            fillColor: "#FF0000",
+            strokeOpacity: 0.8,
+            strokeWeight: 2,
+            fillOpacity: 0.35,
+            zIndex: 1000
+          });
+        }
 
         const temporaryLine = new google.maps.Polyline({
           map: googleMap.current,
@@ -131,11 +146,23 @@ const GoogleMap = forwardRef<GoogleMapHandle, GoogleMapProps>(
             event.domEvent.preventDefault();
 
             if (!pathRef.current?.getLength()) return;
-            const lastPoint = pathRef.current.getAt(
-              pathRef.current.getLength() - 1
-            );
-            if (lastPoint && event.latLng) {
-              temporaryLine.setPath([lastPoint, event.latLng]);
+
+
+            if (shapeType === "polygon") {
+              // For polygons: Connect first point to cursor
+              if (event.latLng) {
+                path.setAt(pathRef.current.getLength() - 1, event.latLng);
+                shapeRef.current?.setPath(path);
+              }
+
+
+            } else {
+              // For polylines: Connect last point to cursor
+              const lastPoint = pathRef.current.getAt(pathRef.current.getLength() - 1);
+
+              if (lastPoint && event.latLng) {
+                temporaryLine.setPath([lastPoint, event.latLng]);
+              }
             }
           }
         );

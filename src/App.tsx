@@ -12,10 +12,13 @@ const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 //   return <Spinner />;
 // };
 export type DrawingStateType = "idle" | "drawing" | "complete";
+export type DrawingShapeType = "polyline" | "polygon";
+
 const App = () => {
   const [drawingState, setDrawingState] = useState<DrawingStateType>("idle");
   const [paths, setPaths] = useState<google.maps.LatLngLiteral[][]>([]);
   const googleMapRef = useRef<GoogleMapHandle>(null);
+  const [shapeType, setShapeType] = useState<DrawingShapeType>("polyline");
 
   const handleSave = () => {
     if (googleMapRef.current) {
@@ -46,8 +49,17 @@ const App = () => {
           center={{ lat: -34.397, lng: 150.644 }}
           drawingState={drawingState}
           onExitDrawing={() => setDrawingState("complete")}
+          shapeType={shapeType}
         />
         <div className="controls">
+          <select
+            value={shapeType}
+            onChange={(e) => setShapeType(e.target.value as DrawingShapeType)}
+            disabled={drawingState !== "idle"}
+          >
+            <option value="polyline">Polyline</option>
+            <option value="polygon">Polygon</option>
+          </select>
           <button
             onClick={() => setDrawingState("drawing")}
             disabled={drawingState !== "idle"}
