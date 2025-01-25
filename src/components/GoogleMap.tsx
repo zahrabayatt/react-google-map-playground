@@ -100,7 +100,9 @@ const GoogleMap = forwardRef<GoogleMapHandle, GoogleMapProps>(
             strokeOpacity: 0.8,
             strokeWeight: 2,
             fillOpacity: 0.35,
-            zIndex: 1000
+            zIndex: 1000,
+            editable: false,
+            clickable: false
           });
         }
 
