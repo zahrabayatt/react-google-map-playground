@@ -11,10 +11,16 @@
   height: 100vh;
 }
 
-.controls {
+.drawing-container {
   position: absolute;
   top: 10px;
   left: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.controls {
   display: flex;
   flex-direction: column;
   gap: 10px;

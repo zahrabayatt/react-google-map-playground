@@ -1,37 +1,20 @@
-import { DrawingShape, DrawingState } from "../types/Drawing";
-
+import { DrawingState } from "../types/Drawing";
 
 interface ControlsProps {
-    selectedShape: DrawingShape;
     drawingState: DrawingState;
-    onShapeChange: (shape: DrawingShape) => void;
     onStart: () => void;
     onClear: () => void;
     onSave: () => void;
 }
 
 const DrawingControls = ({
-    selectedShape,
     drawingState,
-    onShapeChange,
     onStart,
     onClear,
-    onSave
+    onSave,
 }: ControlsProps) => {
     return (
         <div className="controls">
-            <select
-                value={selectedShape}
-                onChange={(e) => onShapeChange(e.target.value as DrawingShape)}
-                disabled={drawingState !== "idle"}
-            >
-                <option value="polyline">Polyline</option>
-                <option value="polygon">Polygon</option>
-                <option value="rectangle">Rectangle</option>
-                <option value="circle">Circle</option>
-                <option value="point">Point</option>
-            </select>
-
             <button onClick={onStart} disabled={drawingState !== "idle"}>
                 Start Drawing
             </button>
@@ -44,7 +27,7 @@ const DrawingControls = ({
                 Save Drawing
             </button>
         </div>
-    )
-}
+    );
+};
 
-export default DrawingControls
+export default DrawingControls;
