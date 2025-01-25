@@ -1,83 +1,46 @@
-import { Wrapper, Status } from "@googlemaps/react-wrapper";
-import { useRef, useState } from "react";
-import GoogleMap, { GoogleMapHandle } from "./components/GoogleMap";
-import Spinner from "./components/Spinner";
-import ErrorComponent from "./components/ErrorComponent";
+import { useState } from "react";
+import { Wrapper } from "@googlemaps/react-wrapper";
+import DrawingControls from "./components/DrawingControls";
+import useDrawingManager from "./hooks/drawing/useDrawingManger";
+import GoogleMap from "./components/GoogleMap";
+import { DrawingEvent, DrawingHandlers, DrawingShape } from "./types/Drawing";
 import "./App.css";
 
-const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
-
-export type DrawingStateType = "idle" | "drawing" | "complete";
-export type DrawingShapeType = "polyline" | "polygon" | "rectangle" | "circle" | "point";
-
 const App = () => {
-  const [drawingState, setDrawingState] = useState<DrawingStateType>("idle");
-  const [paths, setPaths] = useState<google.maps.LatLngLiteral[][]>([]);
-  const googleMapRef = useRef<GoogleMapHandle>(null);
-  const [shapeType, setShapeType] = useState<DrawingShapeType>("polyline");
+  const [map, setMap] = useState<google.maps.Map | null>(null);
+  const [paths, setPaths] = useState<DrawingEvent[]>([]);
+  const [selectedShape, setSelectedShape] = useState<DrawingShape>("polyline");
 
-  const handleSave = () => {
-    if (googleMapRef.current) {
-      const currentPath = googleMapRef.current.getCurrentPath();
-      if (currentPath.length > 0) {
-        setPaths((prev) => [...prev, currentPath]);
-        googleMapRef.current.clearDrawing();
-      }
-    }
-    setDrawingState("idle");
-    console.log(paths);
+  console.log(paths)
+
+  const drawingHandlers: DrawingHandlers = {
+    onDrawingStart: () => console.log("Drawing started"),
+    onDrawingChange: (event) => console.log("Drawing changed", event),
+    onDrawingComplete: (event) => setPaths(prev => [...prev, event]),
+    onDrawingSave: (event) => console.log("Drawing saved", event)
   };
 
-  // Add this new function
-  const handleClear = () => {
-    if (googleMapRef.current) {
-      googleMapRef.current.clearDrawing();
-      setDrawingState("idle"); // Reset to initial state
-    }
-  };
+  const { drawingState, startDrawing, saveDrawing, clearDrawing } =
+    useDrawingManager(map, selectedShape, drawingHandlers);
 
   return (
-    <Wrapper
-      apiKey={apiKey}
-      libraries={["geometry"]}
-      render={(status) =>
-        status === Status.FAILURE ? <ErrorComponent /> : <Spinner />
-      }
-    >
+    <Wrapper apiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY} libraries={["geometry"]}>
       <div className="map-container">
         <GoogleMap
-          ref={googleMapRef}
           zoom={10}
           center={{ lat: -34.397, lng: 150.644 }}
-          drawingState={drawingState}
-          onExitDrawing={() => setDrawingState("complete")}
-          shapeType={shapeType}
+          map={map}
+          setMap={setMap}
         />
-        <div className="controls">
-          <select
-            value={shapeType}
-            onChange={(e) => setShapeType(e.target.value as DrawingShapeType)}
-            disabled={drawingState !== "idle"}
-          >
-            <option value="polyline">Polyline</option>
-            <option value="polygon">Polygon</option>
-            <option value="rectangle">Rectangle</option>
-            <option value="circle">Circle</option>
-            <option value="point">Point</option>
-          </select>
-          <button
-            onClick={() => setDrawingState("drawing")}
-            disabled={drawingState !== "idle"}
-          >
-            Start Drawing
-          </button>
-          <button onClick={handleClear} disabled={drawingState === "idle"}>
-            Clear Drawing
-          </button>
-          <button onClick={handleSave} disabled={drawingState === "idle"}>
-            Save Path
-          </button>
-        </div>
+
+        <DrawingControls
+          selectedShape={selectedShape}
+          drawingState={drawingState}
+          onShapeChange={setSelectedShape}
+          onStart={startDrawing}
+          onClear={clearDrawing}
+          onSave={saveDrawing}
+        />
       </div>
     </Wrapper>
   );
