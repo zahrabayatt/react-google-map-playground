@@ -7,12 +7,8 @@ import "./App.css";
 
 const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
-// const render = (status: Status): ReactElement => {
-//   if (status === Status.FAILURE) return <ErrorComponent />;
-//   return <Spinner />;
-// };
 export type DrawingStateType = "idle" | "drawing" | "complete";
-export type DrawingShapeType = "polyline" | "polygon";
+export type DrawingShapeType = "polyline" | "polygon" | "rectangle";
 
 const App = () => {
   const [drawingState, setDrawingState] = useState<DrawingStateType>("idle");
@@ -59,6 +55,7 @@ const App = () => {
           >
             <option value="polyline">Polyline</option>
             <option value="polygon">Polygon</option>
+            <option value="rectangle">Rectangle</option>
           </select>
           <button
             onClick={() => setDrawingState("drawing")}

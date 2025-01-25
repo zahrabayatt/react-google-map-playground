@@ -1,4 +1,3 @@
-// GoogleMap.tsx
 import { forwardRef, useImperativeHandle, useEffect, useRef } from "react";
 import { DrawingShapeType, DrawingStateType } from "../App";
 
@@ -22,7 +21,7 @@ const GoogleMap = forwardRef<GoogleMapHandle, GoogleMapProps>(
     const pathRef = useRef<google.maps.MVCArray<google.maps.LatLng> | null>(
       null
     );
-    const shapeRef = useRef<google.maps.Polyline | google.maps.Polygon | null>(null);
+    const shapeRef = useRef<google.maps.Polyline | google.maps.Polygon | google.maps.Rectangle | null>(null);
     const temporaryLineRef = useRef<google.maps.Polyline | null>(null);
     const clickListenerRef = useRef<google.maps.MapsEventListener | null>(null);
     const mouseMoveListenerRef = useRef<google.maps.MapsEventListener | null>(
@@ -91,10 +90,23 @@ const GoogleMap = forwardRef<GoogleMapHandle, GoogleMapProps>(
             strokeWeight: 2,
             zIndex: 1000
           });
-        } else {
+        } else if (shapeType === "polygon") {
           shapeRef.current = new google.maps.Polygon({
             map: googleMap.current,
             paths: [path],
+            strokeColor: "#FF0000",
+            fillColor: "#FF0000",
+            strokeOpacity: 0.8,
+            strokeWeight: 2,
+            fillOpacity: 0.35,
+            zIndex: 1000,
+            editable: false,
+            clickable: false
+          });
+        } else if (shapeType === "rectangle") {
+          shapeRef.current = new google.maps.Rectangle({
+            map: googleMap.current,
+            bounds: new google.maps.LatLngBounds(),
             strokeColor: "#FF0000",
             fillColor: "#FF0000",
             strokeOpacity: 0.8,
@@ -128,7 +140,16 @@ const GoogleMap = forwardRef<GoogleMapHandle, GoogleMapProps>(
           (event: google.maps.MapMouseEvent) => {
             if (event.latLng) {
               path.push(event.latLng);
-              temporaryLine.setPath([event.latLng]);
+              //temporaryLine.setPath([event.latLng]);
+
+              if (shapeType === "rectangle") {
+                temporaryLine.setMap(null);
+                if (path.getLength() === 2) {
+                  onExitDrawing();
+                }
+              } else {
+                temporaryLine.setPath([event.latLng]);
+              }
             }
           }
         );
@@ -149,21 +170,37 @@ const GoogleMap = forwardRef<GoogleMapHandle, GoogleMapProps>(
 
             if (!pathRef.current?.getLength()) return;
 
+            switch (shapeType) {
+              case "polygon":
+                if (event.latLng) {
+                  path.setAt(path.getLength() - 1, event.latLng);
+                  (shapeRef.current as google.maps.Polygon).setPath(path);
+                }
+                break;
+              case "rectangle":
+                if (path.getLength() === 1 && event.latLng) {
+                  // const firstPoint = path.getAt(0);
+                  // const bounds = new google.maps.LatLngBounds(firstPoint, event.latLng);
+                  // (shapeRef.current as google.maps.Rectangle).setBounds(bounds);
 
-            if (shapeType === "polygon") {
-              // For polygons: Connect first point to cursor
-              if (event.latLng) {
-                path.setAt(pathRef.current.getLength() - 1, event.latLng);
-                shapeRef.current?.setPath(path);
-              }
-
-
-            } else {
-              // For polylines: Connect last point to cursor
-              const lastPoint = pathRef.current.getAt(pathRef.current.getLength() - 1);
-
-              if (lastPoint && event.latLng) {
-                temporaryLine.setPath([lastPoint, event.latLng]);
+                  const firstPoint = path.getAt(0);
+                  const sw = new google.maps.LatLng(
+                    Math.min(firstPoint.lat(), event.latLng.lat()),
+                    Math.min(firstPoint.lng(), event.latLng.lng())
+                  );
+                  const ne = new google.maps.LatLng(
+                    Math.max(firstPoint.lat(), event.latLng.lat()),
+                    Math.max(firstPoint.lng(), event.latLng.lng())
+                  );
+                  const bounds = new google.maps.LatLngBounds(sw, ne);
+                  (shapeRef.current as google.maps.Rectangle).setBounds(bounds);
+                }
+                break;
+              default: {
+                const lastPoint = path.getAt(path.getLength() - 1);
+                if (lastPoint && event.latLng) {
+                  temporaryLine.setPath([lastPoint, event.latLng]);
+                }
               }
             }
           }
@@ -172,12 +209,9 @@ const GoogleMap = forwardRef<GoogleMapHandle, GoogleMapProps>(
         temporaryLineRef.current?.setMap(null);
         temporaryLineRef.current = null;
 
-        if (clickListenerRef.current)
-          google.maps.event.removeListener(clickListenerRef.current);
-        if (mouseMoveListenerRef.current)
-          google.maps.event.removeListener(mouseMoveListenerRef.current);
-        if (contextMenuListenerRef.current)
-          google.maps.event.removeListener(contextMenuListenerRef.current);
+        [clickListenerRef, mouseMoveListenerRef, contextMenuListenerRef].forEach(listenerRef => {
+          if (listenerRef.current) google.maps.event.removeListener(listenerRef.current);
+        });
 
         googleMap.current.setOptions({
           draggableCursor: null,
@@ -188,7 +222,7 @@ const GoogleMap = forwardRef<GoogleMapHandle, GoogleMapProps>(
           zoomControl: true,
         });
       }
-    }, [drawingState]);
+    }, [drawingState, onExitDrawing, shapeType]);
 
     return <div ref={mapRef} style={{ width: "100%", height: "100%" }} />;
   }
