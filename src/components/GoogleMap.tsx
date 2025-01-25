@@ -21,7 +21,7 @@ const GoogleMap = forwardRef<GoogleMapHandle, GoogleMapProps>(
     const pathRef = useRef<google.maps.MVCArray<google.maps.LatLng> | null>(
       null
     );
-    const shapeRef = useRef<google.maps.Polyline | google.maps.Polygon | google.maps.Rectangle | google.maps.Circle | null>(null);
+    const shapeRef = useRef<google.maps.Polyline | google.maps.Polygon | google.maps.Rectangle | google.maps.Circle | google.maps.Marker | null>(null);
     const temporaryLineRef = useRef<google.maps.Polyline | null>(null);
     const clickListenerRef = useRef<google.maps.MapsEventListener | null>(null);
     const mouseMoveListenerRef = useRef<google.maps.MapsEventListener | null>(
@@ -81,7 +81,22 @@ const GoogleMap = forwardRef<GoogleMapHandle, GoogleMapProps>(
         });
 
         // Create appropriate shape
-        if (shapeType === "polyline") {
+        if (shapeType === "point") {
+          shapeRef.current = new google.maps.Marker({
+            map: googleMap.current,
+            position: null,
+            icon: {
+              path: "M12 0c-4.418 0-8 3.582-8 8 0 8 8 16 8 16s8-8 8-16c0-4.418-3.582-8-8-8zm0 4c2.209 0 4 1.791 4 4s-1.791 4-4 4-4-1.791-4-4 1.791-4 4-4z",
+              fillColor: "#4285F4", // Google blue
+              fillOpacity: 1,
+              strokeColor: "#FFFFFF", // White border
+              strokeWeight: 2,
+              scale: 2, // Adjust size as needed
+              anchor: new google.maps.Point(12, 24) // Proper pin anchor point
+            },
+            zIndex: 1000
+          });
+        } else if (shapeType === "polyline") {
           shapeRef.current = new google.maps.Polyline({
             map: googleMap.current,
             path: path,
@@ -150,40 +165,50 @@ const GoogleMap = forwardRef<GoogleMapHandle, GoogleMapProps>(
         clickListenerRef.current = googleMap.current.addListener(
           "click",
           (event: google.maps.MapMouseEvent) => {
-            if (event.latLng) {
-              if (shapeType === "circle") {
-                if (path.getLength() === 0) {
-                  // First click - set center only
-                  path.push(event.latLng);
-                  (shapeRef.current as google.maps.Circle).setCenter(event.latLng);
-                  temporaryLineRef.current?.setPath([event.latLng]);
-                }
-                else {
-                  if (!event.latLng) return;
+            if (!event.latLng) return;
 
-                  // Complete the circle
-                  path.push(event.latLng);
-                  (shapeRef.current as google.maps.Circle).setRadius(
-                    google.maps.geometry.spherical.computeDistanceBetween(
-                      path.getAt(0),
-                      event.latLng
-                    )
-                  );
-                  temporaryLine.setMap(null);
-                  onExitDrawing();
-                }
-              } else if (shapeType === "rectangle") {
+            if (shapeType === "point") {
+              // Clear previous point
+              path.clear();
+              path.push(event.latLng);
+
+              // Update marker position
+              (shapeRef.current as google.maps.Marker).setPosition(event.latLng);
+              onExitDrawing(); // Auto-complete after single click
+
+            } else if (shapeType === "circle") {
+              if (path.getLength() === 0) {
+                // First click - set center only
                 path.push(event.latLng);
-                temporaryLine.setMap(null);
-                if (path.getLength() === 2) {
-                  onExitDrawing();
-                }
-              } else {
-                path.push(event.latLng);
-                temporaryLine.setPath([event.latLng]);
+                (shapeRef.current as google.maps.Circle).setCenter(event.latLng);
+                temporaryLineRef.current?.setPath([event.latLng]);
               }
+              else {
+                if (!event.latLng) return;
+
+                // Complete the circle
+                path.push(event.latLng);
+                (shapeRef.current as google.maps.Circle).setRadius(
+                  google.maps.geometry.spherical.computeDistanceBetween(
+                    path.getAt(0),
+                    event.latLng
+                  )
+                );
+                temporaryLine.setMap(null);
+                onExitDrawing();
+              }
+            } else if (shapeType === "rectangle") {
+              path.push(event.latLng);
+              temporaryLine.setMap(null);
+              if (path.getLength() === 2) {
+                onExitDrawing();
+              }
+            } else {
+              path.push(event.latLng);
+              temporaryLine.setPath([event.latLng]);
             }
           }
+
         );
 
         contextMenuListenerRef.current = googleMap.current.addListener(
@@ -250,6 +275,8 @@ const GoogleMap = forwardRef<GoogleMapHandle, GoogleMapProps>(
                 }
                 break;
               }
+              case "point":
+                break
               default: {
                 const lastPoint = path.getAt(path.getLength() - 1);
                 if (lastPoint && event.latLng) {

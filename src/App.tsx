@@ -8,7 +8,7 @@ import "./App.css";
 const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
 export type DrawingStateType = "idle" | "drawing" | "complete";
-export type DrawingShapeType = "polyline" | "polygon" | "rectangle" | "circle";
+export type DrawingShapeType = "polyline" | "polygon" | "rectangle" | "circle" | "point";
 
 const App = () => {
   const [drawingState, setDrawingState] = useState<DrawingStateType>("idle");
@@ -63,6 +63,7 @@ const App = () => {
             <option value="polygon">Polygon</option>
             <option value="rectangle">Rectangle</option>
             <option value="circle">Circle</option>
+            <option value="point">Point</option>
           </select>
           <button
             onClick={() => setDrawingState("drawing")}
