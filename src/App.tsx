@@ -8,7 +8,7 @@ import "./App.css";
 const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
 export type DrawingStateType = "idle" | "drawing" | "complete";
-export type DrawingShapeType = "polyline" | "polygon" | "rectangle";
+export type DrawingShapeType = "polyline" | "polygon" | "rectangle" | "circle";
 
 const App = () => {
   const [drawingState, setDrawingState] = useState<DrawingStateType>("idle");
@@ -20,12 +20,12 @@ const App = () => {
     if (googleMapRef.current) {
       const currentPath = googleMapRef.current.getCurrentPath();
       if (currentPath.length > 0) {
-        setPaths(prev => [...prev, currentPath]);
+        setPaths((prev) => [...prev, currentPath]);
         googleMapRef.current.clearDrawing();
       }
     }
     setDrawingState("idle");
-    console.log(paths)
+    console.log(paths);
   };
 
   // Add this new function
@@ -37,7 +37,13 @@ const App = () => {
   };
 
   return (
-    <Wrapper apiKey={apiKey} render={status => status === Status.FAILURE ? <ErrorComponent /> : <Spinner />}>
+    <Wrapper
+      apiKey={apiKey}
+      libraries={["geometry"]}
+      render={(status) =>
+        status === Status.FAILURE ? <ErrorComponent /> : <Spinner />
+      }
+    >
       <div className="map-container">
         <GoogleMap
           ref={googleMapRef}
@@ -56,6 +62,7 @@ const App = () => {
             <option value="polyline">Polyline</option>
             <option value="polygon">Polygon</option>
             <option value="rectangle">Rectangle</option>
+            <option value="circle">Circle</option>
           </select>
           <button
             onClick={() => setDrawingState("drawing")}
@@ -63,16 +70,10 @@ const App = () => {
           >
             Start Drawing
           </button>
-          <button
-            onClick={handleClear}
-            disabled={drawingState === "idle"}
-          >
+          <button onClick={handleClear} disabled={drawingState === "idle"}>
             Clear Drawing
           </button>
-          <button
-            onClick={handleSave}
-            disabled={drawingState === "idle"}
-          >
+          <button onClick={handleSave} disabled={drawingState === "idle"}>
             Save Path
           </button>
         </div>
