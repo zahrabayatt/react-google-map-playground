@@ -13,7 +13,6 @@
     "@deck.gl/core": "^9.0.36",
     "@deck.gl/google-maps": "^9.0.36",
     "@deck.gl/layers": "^9.0.36",
-    "@deck.gl/widgets": "^9.0.38",
     "@googlemaps/js-api-loader": "^1.16.8",
     "@googlemaps/react-wrapper": "^1.1.42",
     "@react-google-maps/api": "^2.20.3",
