@@ -112,13 +112,9 @@ const App = () => {
       clickable: false,
     });
 
-    // Variable to track which polyline is being hovered
-    let activePolyline: { line: google.maps.Polyline; color: string } | null =
-      null;
-
     // Store all markers and connection lines
     const markers: google.maps.Marker[] = [];
-    const connectionLines: google.maps.Polyline[] = [];
+    const connectionLines: (google.maps.Polyline | google.maps.Marker)[] = [];
 
     // Function to find the shortest path between two points using existing polyline segments
     const findShortestPath = (
@@ -205,15 +201,11 @@ const App = () => {
 
       while (unvisited.size > 0) {
         // Find closest unvisited node
-        let current: string | null = null;
-        let minDistance = Infinity;
-        unvisited.forEach((key) => {
-          const distance = distances.get(key)!;
-          if (distance < minDistance) {
-            minDistance = distance;
-            current = key;
-          }
-        });
+        const current = Array.from(unvisited).reduce((a, b) =>
+          (distances.get(a) ?? Infinity) < (distances.get(b) ?? Infinity)
+            ? a
+            : b
+        );
 
         if (!current || current === endNode) break;
         unvisited.delete(current);
@@ -233,11 +225,11 @@ const App = () => {
 
       // Reconstruct path
       const path: google.maps.LatLng[] = [];
-      let current = endNode;
+      let current: string | undefined = endNode;
       while (current) {
         path.unshift(graph.get(current)!.point);
         current = previous.get(current);
-        if (current === startNode) {
+        if (current && current === startNode) {
           path.unshift(graph.get(current)!.point);
           break;
         }
@@ -249,7 +241,13 @@ const App = () => {
     // Function to update all connections
     const updateAllConnections = () => {
       // Clear existing connection lines
-      connectionLines.forEach((line) => line.setMap(null));
+      connectionLines.forEach((line) => {
+        if (line instanceof google.maps.Polyline) {
+          line.setMap(null);
+        } else if (line instanceof google.maps.Marker) {
+          line.setMap(null);
+        }
+      });
       connectionLines.length = 0;
 
       // Create connections between all pairs of markers
@@ -307,7 +305,7 @@ const App = () => {
                 zIndex: 3,
               });
 
-              connectionLines.push(distanceLabel as any);
+              connectionLines.push(distanceLabel as google.maps.Marker);
             }
           }
         }
@@ -334,7 +332,7 @@ const App = () => {
         color: "#0000FF",
         iconUrl: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png",
       },
-    ].forEach(({ line, hitArea, color, iconUrl }) => {
+    ].forEach(({ line, hitArea, iconUrl }) => {
       google.maps.event.addListener(hitArea, "click", () => {
         const position = hoverMarker.getPosition();
         const insertIndex = hoverMarker.get("insertIndex");
@@ -364,14 +362,12 @@ const App = () => {
 
       // Mouseover listener
       google.maps.event.addListener(hitArea, "mouseover", () => {
-        activePolyline = { line, color };
         line.setOptions({ strokeOpacity: 0.8 });
         hoverMarker.setVisible(true);
       });
 
       // Mouseout listener
       google.maps.event.addListener(hitArea, "mouseout", () => {
-        activePolyline = null;
         line.setOptions({ strokeOpacity: 1.0 });
         hoverMarker.setVisible(false);
       });
@@ -497,7 +493,13 @@ const App = () => {
       hitArea3.setMap(null);
       hoverMarker.setMap(null);
       markers.forEach((marker) => marker.setMap(null));
-      connectionLines.forEach((line) => line.setMap(null));
+      connectionLines.forEach((line) => {
+        if (line instanceof google.maps.Polyline) {
+          line.setMap(null);
+        } else if (line instanceof google.maps.Marker) {
+          line.setMap(null);
+        }
+      });
       circles1.forEach((circle) => circle.setMap(null));
       circles2.forEach((circle) => circle.setMap(null));
       circles3.forEach((circle) => circle.setMap(null));
